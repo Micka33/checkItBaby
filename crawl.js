@@ -1,5 +1,5 @@
-var email = 'sophiereveuse@yahoo.com';
-var pwd = 'Test3333';
+var email = 'c29waGllcmV2ZXVzZUB5YWhvby5jb20=';
+var pwd = 'VGVzdDMzMzM=';
 var sParProfile = 60;
 
 
@@ -10,6 +10,17 @@ var casper  = require('casper').create({
                 // logLevel: "debug"
               }),
     moment  = require('moment');
+
+if (casper.cli.has('email'))
+{
+  email = btoa(casper.cli.get('email'));
+  casper.cli.drop('email');
+}
+if (casper.cli.has('pwd'))
+{
+  pwd = btoa(casper.cli.get('pwd'));
+  casper.cli.drop('pwd');
+}
 
 //
 // UTILITY
@@ -110,11 +121,11 @@ var goToSearchPage = function()
 }
 var signIn = function()
 {
-  log('Connexion en tant que '+email+'.');
+  log('Connexion en tant que '+atob(email)+'.');
   this.fill('form#login',
   {
-      username: email,
-      password: pwd
+      username: atob(email),
+      password: atob(pwd)
   }, true); //Filling log in form and submiting
   this.then(goToSearchPage);
 }
