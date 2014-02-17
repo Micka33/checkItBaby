@@ -108,7 +108,7 @@ var goToSearchPage = function()
     this.then(getSearchResults);
   });
 }
-var signInToAdopte = function()
+var signIn = function()
 {
   log('Connexion en tant que '+email+'.');
   this.fill('form#login',
@@ -119,7 +119,7 @@ var signInToAdopte = function()
   this.then(goToSearchPage);
 }
 
-casper.start(atob('aHR0cDovL3d3dy5hZG9wdGV1bm1lYy5jb20v')).then(signInToAdopte);
+casper.start(atob('aHR0cDovL3d3dy5hZG9wdGV1bm1lYy5jb20v')).then(signIn);
 casper.run(function()
 {
   this.exit();
