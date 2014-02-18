@@ -2,18 +2,18 @@ var email = 'c29waGllcmV2ZXVzZUB5YWhvby5jb20=';
 var pwd = 'VGVzdDMzMzM=';
 var sParProfile = 60;
 
-
 var casper  = require('casper').create({
                 viewportSize: {width: 1224, height: 1000000},
                 pageSettings: {loadImages:  true, loadPlugins: true, localToRemoteUrlAccessEnabled: true},
                 // verbose: true,
                 // logLevel: "debug"
               }),
-    moment  = require('moment');
+    moment  = require('moment'),
+    redb    = require('rethinkdb');
 
 if (casper.cli.has('email'))
 {
-  email = btoa(casper.cli.get('email'));
+  email = btoa(casper.cli.get('email').toLowerCase());
   casper.cli.drop('email');
 }
 if (casper.cli.has('pwd'))
@@ -59,6 +59,60 @@ var getPaging = function()
 };
 
 
+log(redb.protobuf_implementation);
+
+//
+// INIT DATABASE
+//
+var conn = null;
+var initDb = function()
+{
+  var createdbtable = function(err, tlist) {
+    log('createdbtable');
+    if (err) throw err;
+    log('end-createdbtable');
+  };
+  var listdbtable = function(err, tlist) {
+    log('listdbtable');
+    if (err) throw err;
+    if (list.indexOf('people') < 0)
+    {
+      redb.db(email).tableCreate('people').run(conn, createdbtable);
+    }
+    log('end-listdbtable');
+  };
+  var createdb = function(err) {
+    log('createdb');
+    if (err) throw err;
+      redb.db(email).tableList().run(conn, listdbtable);
+    log('end-createdb');
+  };
+  var listdbs = function(err, dblist) {
+    log('listbds');
+    if (err) throw err;
+    if (dblist.indexOf(email) < 0)
+    {
+      redb.dbCreate(email).run(conn, createdb);
+    }
+    else
+    {
+      redb.db(email).tableList().run(conn, listdbtable);
+    }
+    log('end-listdbs');
+  };
+  var connect = function(err, c) {
+    log('connect');
+    if (err) throw err;
+    conn = c;
+    redb.dbList().run(conn, listdbs);
+    log('end-connect');
+  };
+  redb.connect( {host: 'localhost', port: 28015}, connect);
+}
+
+
+
+
 //
 // Algo
 //
@@ -97,7 +151,7 @@ var visitProfiles = function()
     });
     i++;
   });
-  this.then(nextPage);  
+  this.then(nextPage);
 }
 var getSearchResults = function()
 {
@@ -121,13 +175,15 @@ var goToSearchPage = function()
 }
 var signIn = function()
 {
-  log('Connexion en tant que '+atob(email)+'.');
-  this.fill('form#login',
-  {
-      username: atob(email),
-      password: atob(pwd)
-  }, true); //Filling log in form and submiting
-  this.then(goToSearchPage);
+  initDb();
+  // while(dbNotReady);
+  // log('Connexion en tant que '+atob(email)+'.');
+  // this.fill('form#login',
+  // {
+  //     username: atob(email),
+  //     password: atob(pwd)
+  // }, true); //Filling log in form and submiting
+  // this.then(goToSearchPage);
 }
 
 casper.start(atob('aHR0cDovL3d3dy5hZG9wdGV1bm1lYy5jb20v')).then(signIn);
