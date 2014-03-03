@@ -1,26 +1,37 @@
+// Whole-script strict mode syntax
+"use strict";
+
 var email = 'c29waGllcmV2ZXVzZUB5YWhvby5jb20=';
 var pwd = 'VGVzdDMzMzM=';
 var sParProfile = 60;
 
-var casper  = require('casper').create({
-                viewportSize: {width: 1224, height: 1000000},
-                pageSettings: {loadImages:  true, loadPlugins: true, localToRemoteUrlAccessEnabled: true},
-                // verbose: true,
-                // logLevel: "debug"
-              }),
-    moment  = require('moment'),
-    redb    = require('rethinkdb');
+var page    = require('webpage').create(),
+    system  = require('system'),
+    args    = require('minimist')(system.args.slice(1)),
+    moment  = require('moment');
+    // redb    = require('rethinkdb');
 
-if (casper.cli.has('email'))
-{
-  email = btoa(casper.cli.get('email').toLowerCase());
-  casper.cli.drop('email');
-}
-if (casper.cli.has('pwd'))
-{
-  pwd = btoa(casper.cli.get('pwd'));
-  casper.cli.drop('pwd');
-}
+//clearing minimist memory from the pwd and email
+require('minimist')(['stuff', 'nuff', 'nop', 'top', 'nutch', 'fetch', 'ornot']);
+
+// if (((args.password == undefined) && (args.p == undefined)) ||
+//     ((args.email == undefined) && (args.e == undefined)))
+// {
+//   console.log('Usage: crawl.js --password secret --email you@email.com');
+//   console.log('       crawl.js -p secret -e you@email.com');
+//   phantom.exit();
+// }
+// email = btoa((args.email != undefined)?(args.email):(args.e));
+// pwd = btoa((args.password != undefined)?(args.password):(args.p));
+
+//Clearing args parameter from memory and freezing it, since we won't use it anymore.
+args.email = 'nothingtoseeherejustclearing1thistobesurenoonereaditinmemory';
+args.e = 'nothingtoseeherejustclearingthis2tobesurenoonereaditinmemory';
+args.password = 'nothingtoseeherejustclear3ingthistobesurenoonereaditinmemory';
+args.p = 'nothingtoseeherejustclearingthis4tobesurenoonereaditinmemory';
+Object.freeze(args);
+
+
 
 //
 // UTILITY
@@ -28,11 +39,84 @@ if (casper.cli.has('pwd'))
 var total = 0;
 var subtotal = 0;
 var current = 0;
+var urlLoaded = null;
 var log = function(msg)
 {
   var time = moment().format('h:mm:ss a');
   console.log('['+time+'] '+msg);
 };
+var click = function(selector)
+{
+  page.evaluate(function() {
+    $(selector).click();
+  });
+};
+var fillAndsubmit = function(form, names) {
+  page.evaluate(function(form, names)
+  {
+    for (var i = names.length - 1; i >= 0; i--)
+    {
+      selector = form+' [name='+names[i][0]+']';
+      if ($(selector).is('select'))
+        $(selector+" option").filter(function() {
+          return $.trim($(this).text()) === $.trim(names[i][1]);
+        }).prop('selected', true);
+      else if ($(selector).is('input'))
+        $(selector).val(names[i][1]);
+      console.log($(selector).val());
+    };
+    $(form).submit();
+    console.log('form submitted');
+  }, form, names);
+};
+var printScreen = function(name)
+{
+  page.render(name+'.jpeg');
+};
+var currentUrl = function() {
+  return page.evaluate(function(){return window.location.href;});
+};
+var waittil = function(urlToWaitFor, delay, then) {
+  urlLoaded = null;
+  var start = moment();
+  var intervalID = window.setInterval(function()
+  {
+    if ((moment().diff(start, 'seconds') > delay) ||
+      (urlLoaded === urlToWaitFor))
+    {
+      clearInterval(intervalID);
+      urlLoaded = null;
+      then();
+    }
+  },
+  200);
+};
+page.onLoadFinished = function() {
+  urlLoaded = currentUrl();
+};
+var hasClass = function(el, classToCheck) {
+  return page.evaluate(function(el, classToCheck) {
+    return $(el).hasClass(classToCheck);
+  },
+  el, classToCheck);
+};
+
+
+// page.onUrlChanged = function(targetUrl) {
+//   console.log('New URL: ' + targetUrl);
+// };
+// page.onNavigationRequested = function(url, type, willNavigate, main) {
+//   console.log('Trying to navigate to: ' + url);
+//   console.log('Caused by: ' + type);
+//   console.log('Will actually navigate: ' + willNavigate);
+//   console.log('Sent from the page\'s main frame: ' + main);
+// };
+page.onConsoleMessage = function(msg, lineNum, sourceId) {
+  console.log('CONSOLE: ' + msg + ' (from line #' + lineNum + ' in "' + sourceId + '")');
+};
+//
+//
+//
 var getPageResult = function()
 {
     var data = {profiles:[], total:0};
@@ -59,56 +143,56 @@ var getPaging = function()
 };
 
 
-log(redb.protobuf_implementation);
+// log(redb.protobuf_implementation);
 
 //
 // INIT DATABASE
 //
-var conn = null;
-var initDb = function()
-{
-  var createdbtable = function(err, tlist) {
-    log('createdbtable');
-    if (err) throw err;
-    log('end-createdbtable');
-  };
-  var listdbtable = function(err, tlist) {
-    log('listdbtable');
-    if (err) throw err;
-    if (list.indexOf('people') < 0)
-    {
-      redb.db(email).tableCreate('people').run(conn, createdbtable);
-    }
-    log('end-listdbtable');
-  };
-  var createdb = function(err) {
-    log('createdb');
-    if (err) throw err;
-      redb.db(email).tableList().run(conn, listdbtable);
-    log('end-createdb');
-  };
-  var listdbs = function(err, dblist) {
-    log('listbds');
-    if (err) throw err;
-    if (dblist.indexOf(email) < 0)
-    {
-      redb.dbCreate(email).run(conn, createdb);
-    }
-    else
-    {
-      redb.db(email).tableList().run(conn, listdbtable);
-    }
-    log('end-listdbs');
-  };
-  var connect = function(err, c) {
-    log('connect');
-    if (err) throw err;
-    conn = c;
-    redb.dbList().run(conn, listdbs);
-    log('end-connect');
-  };
-  redb.connect( {host: 'localhost', port: 28015}, connect);
-}
+// var conn = null;
+// var initDb = function()
+// {
+//   var createdbtable = function(err, tlist) {
+//     log('createdbtable');
+//     if (err) throw err;
+//     log('end-createdbtable');
+//   };
+//   var listdbtable = function(err, tlist) {
+//     log('listdbtable');
+//     if (err) throw err;
+//     if (list.indexOf('people') < 0)
+//     {
+//       redb.db(email).tableCreate('people').run(conn, createdbtable);
+//     }
+//     log('end-listdbtable');
+//   };
+//   var createdb = function(err) {
+//     log('createdb');
+//     if (err) throw err;
+//       redb.db(email).tableList().run(conn, listdbtable);
+//     log('end-createdb');
+//   };
+//   var listdbs = function(err, dblist) {
+//     log('listbds');
+//     if (err) throw err;
+//     if (dblist.indexOf(email) < 0)
+//     {
+//       redb.dbCreate(email).run(conn, createdb);
+//     }
+//     else
+//     {
+//       redb.db(email).tableList().run(conn, listdbtable);
+//     }
+//     log('end-listdbs');
+//   };
+//   var connect = function(err, c) {
+//     log('connect');
+//     if (err) throw err;
+//     conn = c;
+//     redb.dbList().run(conn, listdbs);
+//     log('end-connect');
+//   };
+//   redb.connect( {host: 'localhost', port: 28015}, connect);
+// }
 
 
 
@@ -116,81 +200,108 @@ var initDb = function()
 //
 // Algo
 //
-var nextPage = function()
-{
-  var selector = '#charms .nav-pager a.pager-next';
-  this.waitForSelector(selector, function()
-  {
-    this.click(selector);
-    this.wait(6000, visitProfiles);
-  });
-}
-var visit = function()
-{
-    current++;
-    subtotal--;
-    var guy = JSON.parse(this.evaluate(getGuyInfo));
-    log('Visite de '+guy.name+' / '+guy.age+' / '+guy.city+' ('+this.getCurrentUrl()+')');
-    this.captureSelector(current.toString()+'_'+guy.name.replace(/\/|\\/, '')+'.jpeg', '#content .content-wrapper', {format: 'jpeg', quality: 100});
-}
-var visitProfiles = function()
-{
-  log('Affichage des profiles '+JSON.parse(this.evaluate(getPaging)).pagging+'.');
-  var ctx = this;
-  var datas = JSON.parse(this.evaluate(getPageResult));
-  total = datas.total;
-  subtotal = datas.profiles.length;
-  var i = 0;
-  this.repeat(datas.profiles.length, function repeat()
-  {
-    var url = atob('aHR0cDovL3d3dy5hZG9wdGV1bm1lYy5jb20vcHJvZmlsZS8=')+datas.profiles[i].toString();
-    this.thenOpen(url, visit);
-    this.wait((sParProfile*1000), function()
-    {
-      this.back();
-    });
-    i++;
-  });
-  this.then(nextPage);
-}
-var getSearchResults = function()
-{
-  log('Récupération de la liste des profiles.');
-  var hasResults = this.evaluate(function(selector)
-  {
-    return $(selector).length == 1;
-  }, 'section#charms');
-  if (!hasResults)
-    this.click('form#search-form button[type="submit"]');//Clicking on the search button
-  this.wait(6000, visitProfiles);//waiting 6s
-}
+// var nextPage = function()
+// {
+//   var selector = '#charms .nav-pager a.pager-next';
+//   this.waitForSelector(selector, function()
+//   {
+//     this.click(selector);
+//     this.wait(6000, visitProfiles);
+//   });
+// }
+// var visit = function()
+// {
+//     current++;
+//     subtotal--;
+//     var guy = JSON.parse(this.evaluate(getGuyInfo));
+//     log('Visite de '+guy.name+' / '+guy.age+' / '+guy.city+' ('+this.getCurrentUrl()+')');
+//     this.captureSelector(current.toString()+'_'+guy.name.replace(/\/|\\/, '')+'.jpeg', '#content .content-wrapper', {format: 'jpeg', quality: 100});
+// }
+// var visitProfiles = function()
+// {
+//   log('Affichage des profiles '+JSON.parse(this.evaluate(getPaging)).pagging+'.');
+//   var ctx = this;
+//   var datas = JSON.parse(this.evaluate(getPageResult));
+//   total = datas.total;
+//   subtotal = datas.profiles.length;
+//   var i = 0;
+//   this.repeat(datas.profiles.length, function repeat()
+//   {
+//     var url = atob('aHR0cDovL3d3dy5hZG9wdGV1bm1lYy5jb20vcHJvZmlsZS8=')+datas.profiles[i].toString();
+//     this.thenOpen(url, visit);
+//     this.wait((sParProfile*1000), function()
+//     {
+//       this.back();
+//     });
+//     i++;
+//   });
+//   this.then(nextPage);
+// }
+// var getSearchResults = function()
+// {
+//   log('Récupération de la liste des profiles.');
+//   var hasResults = this.evaluate(function(selector)
+//   {
+//     return $(selector).length == 1;
+//   }, 'section#charms');
+//   if (!hasResults)
+//     this.click('form#search-form button[type="submit"]');//Clicking on the search button
+//   this.wait(6000, visitProfiles);//waiting 6s
+// }
 var goToSearchPage = function()
 {
-  log('Affichage de la page de recherche.');
-  this.wait(6000, function()//waiting 6s
-  {
-    this.click('#search a');//Clicking on the search link
-    this.then(getSearchResults);
-  });
+//   log('Affichage de la page de recherche.');
+//   this.wait(6000, function()//waiting 6s
+//   {
+//     this.click('#search a');//Clicking on the search link
+//     this.then(getSearchResults);
+//   });
+  phantom.exit();
 }
 var signIn = function()
 {
-  initDb();
+  // initDb();
   // while(dbNotReady);
-  // log('Connexion en tant que '+atob(email)+'.');
-  // this.fill('form#login',
-  // {
-  //     username: atob(email),
-  //     password: atob(pwd)
-  // }, true); //Filling log in form and submiting
-  // this.then(goToSearchPage);
+  log('Connexion en tant que '+atob(email)+'.');
+  fillAndsubmit('form#login',
+    [['username', atob(email)],
+     ['password', atob(pwd)]
+    ]);
+  waittil('http://www.adopteunmec.com/index', 10, function()
+  {
+    if (hasClass('body', 'logged'))
+    {
+      log('Connexion réussie ! :D');
+      printScreen('home');
+      goToSearchPage();
+    }
+    else
+    {
+      log('Connexion échouée. :\'(');
+      phantom.exit();
+    }
+  });
 }
 
-casper.start(atob('aHR0cDovL3d3dy5hZG9wdGV1bm1lYy5jb20v')).then(signIn);
-casper.run(function()
-{
-  this.exit();
-});
+page.open(atob('aHR0cDovL3d3dy5hZG9wdGV1bm1lYy5jb20v'),signIn);
+
+// var signIn = function()
+// {
+//   // initDb();
+//   while(dbNotReady);
+//   log('Connexion en tant que '+atob(email)+'.');
+//   this.fill('form#login',
+//   {
+//       username: atob(email),
+//       password: atob(pwd)
+//   }, true); //Filling log in form and submiting
+//   this.then(goToSearchPage);
+// }
+// casper.start().then(signIn);
+// casper.run(function()
+// {
+//   this.exit();
+// });
 
 
 
