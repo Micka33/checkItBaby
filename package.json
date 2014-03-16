@@ -1,0 +1,35 @@
+{
+  "name": "checkItBaby",
+  "version": "0.0.0",
+  "description": "checkItBaby ===========",
+  "main": "crawl.js",
+  "dependencies": {
+    "phantomjs": "~1.9.7-1",
+    "phantom": "~0.5.7",
+    "minimist": "0.0.8",
+    "moment": "~2.5.1",
+    "redis": "~0.10.1",
+    "node-uuid": "~1.4.1"
+  },
+  "devDependencies": {
+    "phantomjs": "~1.9.7-1",
+    "minimist": "0.0.8",
+    "moment": "~2.5.1",
+    "redis": "~0.10.1",
+    "node-uuid": "~1.4.1",
+    "phantom": "~0.5.7"
+  },
+  "scripts": {
+    "test": "phantomjs crawl.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Micka33/checkItBaby.git"
+  },
+  "author": "Micka33",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Micka33/checkItBaby/issues"
+  },
+  "homepage": "https://github.com/Micka33/checkItBaby"
+}
