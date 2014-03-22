@@ -9,9 +9,7 @@ var maxDelayPerRequest = 15;
 var page    = require('webpage').create(),
     system  = require('system'),
     args    = require('minimist')(system.args.slice(1)),
-    moment  = require('moment'),
-    redis   = require("redis"),
-    uuid    = require('node-uuid');
+    moment  = require('moment');
     //clearing minimist memory from the pwd and email
     require('minimist')(['stuff', 'nuff', 'nop', 'top', 'nutch', 'fetch', 'ornot']);
 
@@ -93,6 +91,7 @@ var waittil = function(urlToWaitFor, delay, then) {
 };
 page.onLoadFinished = function(status) {
   urlLoaded = currentUrl();
+  page.includeJs('http://localhost:8889/socket.io/socket.io.js');
 };
 var hasClass = function(el, classToCheck) {
   return page.evaluate(function(el, classToCheck) {
@@ -107,7 +106,6 @@ var hasDiv = function(selector) {
 };
 var exit = function() {
   log('Fin.');
-  redis.quit()
   phantom.exit();
 };
 
@@ -121,7 +119,7 @@ var exit = function() {
 //   console.log('Sent from the page\'s main frame: ' + main);
 // };
 page.onConsoleMessage = function(msg, lineNum, sourceId) {
-  // console.log('CONSOLE: ' + msg + ' (from line #' + lineNum + ' in "' + sourceId + '")');
+  console.log('CONSOLE: ' + msg + ' (from line #' + lineNum + ' in "' + sourceId + '")');
 };
 //
 //
@@ -201,33 +199,24 @@ Object.freeze(args);
 
 
 
-//
-// INIT DATABASE
-//
-redis = redis.createClient();
-redis.on('error', function (err) {
-  log('La connection à la bdd a échoué: ' + err);
-  exit();
-});
-redis.on('connect', function () {
-  log('La connection à la bdd a réussie.');
-});
-redis.on('ready', function () {
-  log('La bdd est prête à recevoir les urls des profiles.');
-});
-redis.on('end', function () {
-  log('La connection à la bdd a été coupé.');
-});
 //DATABASE UTILITIES
 var saveProfile = function(profile) {
-  var key = "profiles."+email;
-  var field = profile.id;
-  log('redis.hsetnx('+key+', '+field+', {url:'+profile.url+', checked:false});');
-  // var entryIsNew = redis.hsetnx(key, field, {url:profile.url, checked:false});
-  // if (entryIsNew)
-  //   redis.publish(key, {url:profile.url});
+  page.evaluate(function(email, profile) {
+    // $(document).append('<script src="http://localhost:8889/socket.io/socket.io.js"></script>');
+    var fireWhenReady = function () {
+        if (typeof io != 'undefined') {
+          var socket = io.connect('http://localhost:8889/');
+          // socket.on('connect', function () {
+            socket.emit('register', { email:email, profile:profile });
+          // });
+        }
+        else {
+          setTimeout(fireWhenReady, 100);
+        }
+    };
+    fireWhenReady();
+  }, email, profile);
 };
-
 
 
 
